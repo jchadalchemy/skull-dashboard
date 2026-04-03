@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Skull Dashboard 💀</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="header">
+    <div class="header-title">Skull Dashboard 💀</div>
+    <div class="header-meta">
+      <span class="last-refresh" id="last-refresh">Loading…</span>
+      <label class="refresh-toggle">
+        <input type="checkbox" id="auto-refresh" checked>
+        Auto-refresh
+      </label>
+      <button class="refresh-btn" onclick="refreshAll()">⟳ Refresh</button>
+    </div>
+  </header>
+
+  <!-- Sprint Banner -->
+  <div class="sprint-banner">
+    <span class="sprint-label">Active Sprint</span>
+    <span class="sprint-name" id="sprint-name">Loading…</span>
+  </div>
+
+  <!-- Dashboard Grid -->
+  <main class="dashboard-grid">
+
+    <!-- Card 1: Tasks -->
+    <div class="card" id="card-tasks" data-status="neutral">
+      <div class="card-header">
+        <span class="card-title">🔥 Tasks</span>
+        <span class="card-count" id="tasks-count">—</span>
+      </div>
+      <div class="card-body" id="tasks-body">
+        <span class="loading">Loading…</span>
+      </div>
+    </div>
+
+    <!-- Card 2: Blockers -->
+    <div class="card" id="card-blockers" data-status="neutral">
+      <div class="card-header">
+        <span class="card-title">🚧 Blockers</span>
+        <span class="card-count" id="blockers-count">—</span>
+      </div>
+      <div class="card-body" id="blockers-body">
+        <span class="loading">Loading…</span>
+      </div>
+    </div>
+
+    <!-- Card 3: Commitments -->
+    <div class="card" id="card-commitments" data-status="neutral">
+      <div class="card-header">
+        <span class="card-title">📌 Commitments</span>
+        <span class="card-count" id="commitments-count">—</span>
+      </div>
+      <div class="card-body" id="commitments-body">
+        <span class="loading">Loading…</span>
+      </div>
+    </div>
+
+    <!-- Card 4: Decisions -->
+    <div class="card" id="card-decisions" data-status="neutral">
+      <div class="card-header">
+        <span class="card-title">⚖️ Decisions</span>
+        <span class="card-count" id="decisions-count">—</span>
+      </div>
+      <div class="card-body" id="decisions-body">
+        <span class="loading">Loading…</span>
+      </div>
+    </div>
+
+    <!-- Card 5: Clients -->
+    <div class="card" id="card-clients" data-status="neutral">
+      <div class="card-header">
+        <span class="card-title">👥 Clients</span>
+        <span class="card-count" id="clients-count">—</span>
+      </div>
+      <div class="card-body" id="clients-body">
+        <span class="loading">Loading…</span>
+      </div>
+    </div>
+
+    <!-- Card 6: Services -->
+    <div class="card" id="card-services" data-status="neutral">
+      <div class="card-header">
+        <span class="card-title">🛰️ Services</span>
+        <span class="card-count" id="services-count">—</span>
+      </div>
+      <div class="card-body" id="services-body">
+        <span class="loading">Loading…</span>
+      </div>
+    </div>
+
+    <!-- Card 7: Activity Feed -->
+    <div class="card card-activity" id="card-activity" data-status="neutral">
+      <div class="card-header">
+        <span class="card-title">📡 Activity Feed</span>
+        <span class="card-count" id="activity-count">—</span>
+      </div>
+      <div class="card-body scrollable" id="activity-body">
+        <span class="loading">Loading…</span>
+      </div>
+    </div>
+
+    <!-- Card 8: Financial -->
+    <div class="card" id="card-financial" data-status="neutral">
+      <div class="card-header">
+        <span class="card-title">💰 Financial</span>
+        <span class="card-count" id="financial-count">—</span>
+      </div>
+      <div class="card-body" id="financial-body">
+        <span class="loading">Loading…</span>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-schedule-c">
+      <div class="footer-section-label">Schedule C Status</div>
+      <div id="footer-schedule-c">Loading…</div>
+    </div>
+    <div class="footer-links">
+      <a href="http://5.78.130.196:8083" target="_blank">📄 Docs</a>
+      <a href="https://github.com/jchadalchemy" target="_blank">🐙 GitHub</a>
+      <a href="https://hadalchemy.slack.com" target="_blank">💬 Slack</a>
+    </div>
+  </footer>
+
+  <script src="dashboard.js"></script>
+</body>
+</html>

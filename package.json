@@ -1,0 +1,15 @@
+{
+  "name": "skull-dashboard",
+  "version": "1.0.0",
+  "description": "Skull Dashboard 💀 — Live operational overview for Jay & Skull",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "NODE_ENV=development node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "js-yaml": "^4.1.0"
+  },
+  "license": "MIT"
+}
