@@ -121,6 +121,26 @@ async function fetchJSON(endpoint) {
 // Renderers
 // ──────────────────────────────────────────────
 
+// ──────────────────────────────────────────────
+// Interactive checkbox helpers
+// ──────────────────────────────────────────────
+
+/**
+ * POST to an API endpoint and handle undo state.
+ */
+async function postAction(endpoint, body) {
+  const res = await fetch(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
 function renderTasks(data) {
   const tasks = data.top_tasks || [];
   el('tasks-count').textContent = tasks.length;
@@ -131,26 +151,55 @@ function renderTasks(data) {
     return;
   }
 
-  // Check if any are overdue/critical
-  const hasRed = tasks.some(t => taskStatusClass(t.item, t.status) === 'red');
-  setCardStatus('card-tasks', hasRed ? 'error' : 'warn');
+  // Check if any non-done are overdue/critical
+  const activeTasks = tasks.filter(t => t.status !== 'done');
+  const hasRed = activeTasks.some(t => taskStatusClass(t.item, t.status) === 'red');
+  setCardStatus('card-tasks', activeTasks.length === 0 ? 'ok' : hasRed ? 'error' : 'warn');
 
-  el('tasks-body').innerHTML = tasks.map(t => {
+  const container = document.createElement('div');
+  container.className = 'task-list-container';
+
+  tasks.forEach(t => {
+    const isDone = t.status === 'done';
     const cls = taskStatusClass(t.item, t.status);
     const age = t.verified_at ? relativeAge(t.verified_at) : '';
     const statusLabel = t.status || '';
-    return `
-      <div class="task-item">
-        <div class="task-content">
-          <div class="task-text">${esc(t.item)}</div>
-          <div class="task-meta">
-            ${statusLabel ? `<span class="status-badge status-${cls}">${esc(statusLabel)}</span>` : ''}
-            ${age ? `<span class="age-chip">${age}</span>` : ''}
-          </div>
+    const checkId = 'task-' + btoa(encodeURIComponent(t.item)).slice(0, 16);
+
+    const div = document.createElement('div');
+    div.className = 'task-item' + (isDone ? ' completed' : '');
+    div.innerHTML = `
+      <input type="checkbox" class="item-checkbox" id="${checkId}" ${isDone ? 'checked' : ''}>
+      <div class="task-content">
+        <label class="task-text" for="${checkId}" style="cursor:pointer">${esc(t.item)}</label>
+        <div class="task-meta">
+          ${(!isDone && statusLabel) ? `<span class="status-badge status-${cls}">${esc(statusLabel)}</span>` : ''}
+          ${isDone ? '<span class="status-badge status-green">done</span>' : ''}
+          ${age ? `<span class="age-chip">${age}</span>` : ''}
         </div>
       </div>
     `;
-  }).join('');
+
+    const checkbox = div.querySelector('.item-checkbox');
+    checkbox.addEventListener('change', async () => {
+      try {
+        await postAction('/api/task/complete', { item: t.item, undo: !checkbox.checked });
+        div.classList.toggle('completed', checkbox.checked);
+        // Soft re-sort: move to bottom if checked, to top if unchecked
+        if (checkbox.checked) container.appendChild(div);
+        else container.prepend(div);
+      } catch (err) {
+        console.error('Task update failed:', err);
+        checkbox.checked = !checkbox.checked; // revert
+        alert('Failed to update task: ' + err.message);
+      }
+    });
+
+    container.appendChild(div);
+  });
+
+  el('tasks-body').innerHTML = '';
+  el('tasks-body').appendChild(container);
 }
 
 function renderBlockers(data) {
@@ -163,20 +212,50 @@ function renderBlockers(data) {
     return;
   }
 
-  setCardStatus('card-blockers', 'warn');
+  const activeBlockers = blockers.filter(b => b.status !== 'resolved');
+  setCardStatus('card-blockers', activeBlockers.length === 0 ? 'ok' : 'warn');
 
-  el('blockers-body').innerHTML = blockers.map(b => {
+  const container = document.createElement('div');
+  container.className = 'task-list-container';
+
+  blockers.forEach(b => {
+    const isResolved = b.status === 'resolved';
     const age = b.verified_at ? relativeAge(b.verified_at) : '';
-    return `
-      <div class="blocker-item">
-        <div class="blocker-text">${esc(b.item)}</div>
+    const checkId = 'blocker-' + btoa(encodeURIComponent(b.item)).slice(0, 16);
+
+    const div = document.createElement('div');
+    div.className = 'blocker-item' + (isResolved ? ' resolved' : '');
+    div.innerHTML = `
+      <input type="checkbox" class="item-checkbox" id="${checkId}" ${isResolved ? 'checked' : ''}>
+      <div class="blocker-content">
+        <label class="blocker-text" for="${checkId}" style="cursor:pointer">${esc(b.item)}</label>
         <div class="blocker-owner">
           ${b.owner ? `👤 ${esc(b.owner)}` : ''}
           ${age ? `<span class="age-chip" style="margin-left:6px">${age}</span>` : ''}
+          ${isResolved ? '<span class="age-chip" style="margin-left:6px;color:var(--green)">resolved</span>' : ''}
         </div>
       </div>
     `;
-  }).join('');
+
+    const checkbox = div.querySelector('.item-checkbox');
+    checkbox.addEventListener('change', async () => {
+      try {
+        await postAction('/api/blocker/resolve', { item: b.item, undo: !checkbox.checked });
+        div.classList.toggle('resolved', checkbox.checked);
+        if (checkbox.checked) container.appendChild(div);
+        else container.prepend(div);
+      } catch (err) {
+        console.error('Blocker update failed:', err);
+        checkbox.checked = !checkbox.checked;
+        alert('Failed to update blocker: ' + err.message);
+      }
+    });
+
+    container.appendChild(div);
+  });
+
+  el('blockers-body').innerHTML = '';
+  el('blockers-body').appendChild(container);
 }
 
 function renderCommitments(commitData) {
@@ -190,26 +269,58 @@ function renderCommitments(commitData) {
   }
 
   let hasOverdue = false;
-  const html = commitments.map(c => {
-    const { label, cls } = deadlineCountdown(c.deadline || c.by);
-    const isOverdue = cls === 'overdue';
-    const isDueSoon = cls === 'due-soon';
-    if (isOverdue) hasOverdue = true;
+  const active = commitments.filter(c => c.status !== 'done');
+  active.forEach(c => {
+    const { cls } = deadlineCountdown(c.deadline || c.by);
+    if (cls === 'overdue') hasOverdue = true;
+  });
 
-    const itemClass = isOverdue ? 'overdue' : isDueSoon ? 'due-soon' : '';
-    return `
-      <div class="commitment-item ${itemClass}">
-        <div class="commitment-what">${esc(c.what || c.item || JSON.stringify(c))}</div>
+  const container = document.createElement('div');
+  container.className = 'task-list-container';
+
+  commitments.forEach(c => {
+    const isDone = c.status === 'done';
+    const { label, cls } = deadlineCountdown(c.deadline || c.by);
+    const isOverdue = cls === 'overdue' && !isDone;
+    const isDueSoon = cls === 'due-soon' && !isDone;
+
+    const itemClass = isDone ? 'completed' : isOverdue ? 'overdue' : isDueSoon ? 'due-soon' : '';
+    const what = c.what || c.item || JSON.stringify(c);
+    const checkId = 'commit-' + btoa(encodeURIComponent(what)).slice(0, 16);
+
+    const div = document.createElement('div');
+    div.className = 'commitment-item ' + itemClass;
+    div.innerHTML = `
+      <input type="checkbox" class="item-checkbox" id="${checkId}" ${isDone ? 'checked' : ''}>
+      <div class="commitment-content">
+        <label class="commitment-what" for="${checkId}" style="cursor:pointer">${esc(what)}</label>
         <div class="commitment-meta">
           ${c.who ? `<span class="commitment-who">→ ${esc(c.who)}</span>` : ''}
-          ${(c.deadline || c.by) ? `<span class="commitment-deadline">${esc(c.deadline || c.by)}</span>` : ''}
-          <span class="commitment-countdown ${cls}">${label}</span>
+          ${(c.deadline || c.by) && !isDone ? `<span class="commitment-deadline">${esc(c.deadline || c.by)}</span>` : ''}
+          ${!isDone ? `<span class="commitment-countdown ${cls}">${label}</span>` : '<span class="commitment-countdown ok">done</span>'}
         </div>
       </div>
     `;
-  }).join('');
 
-  el('commitments-body').innerHTML = html;
+    const checkbox = div.querySelector('.item-checkbox');
+    checkbox.addEventListener('change', async () => {
+      try {
+        await postAction('/api/commitment/complete', { what, undo: !checkbox.checked });
+        div.classList.toggle('completed', checkbox.checked);
+        if (checkbox.checked) container.appendChild(div);
+        else container.prepend(div);
+      } catch (err) {
+        console.error('Commitment update failed:', err);
+        checkbox.checked = !checkbox.checked;
+        alert('Failed to update commitment: ' + err.message);
+      }
+    });
+
+    container.appendChild(div);
+  });
+
+  el('commitments-body').innerHTML = '';
+  el('commitments-body').appendChild(container);
   setCardStatus('card-commitments', hasOverdue ? 'error' : 'neutral');
 }
 
