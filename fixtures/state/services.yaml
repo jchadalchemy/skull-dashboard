@@ -1,0 +1,3 @@
+services:
+  skull-dashboard:
+    status: synthetic
