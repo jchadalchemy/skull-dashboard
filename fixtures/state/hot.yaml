@@ -1,0 +1,10 @@
+active_sprint: synthetic-preview
+top_tasks:
+  - item: Verify synthetic preview task
+    status: pending
+blockers:
+  - item: Synthetic preview blocker
+    status: open
+clients: {}
+services: {}
+financial: {}
